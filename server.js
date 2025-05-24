@@ -24,11 +24,13 @@ connectDB().then(async () => {
 // Middleware
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
-    ? [process.env.FRONTEND_URL, 'https://note-mate.vercel.app']
+    ? [process.env.FRONTEND_URL, 'https://note-mate.vercel.app', 'https://notes-mate-nine.vercel.app', 'https://notes-mate.vercel.app']
     : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
 app.use(cors(corsOptions));
