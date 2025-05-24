@@ -115,24 +115,69 @@ router.post('/verify', async (req, res) => {
       throw new Error('Invalid token: No user ID found');
     }
 
-    // Use findOneAndUpdate with upsert to handle both create and update cases
-    const user = await User.findOneAndUpdate(
-      { firebaseUid: decodedToken.uid },
-      {
-        $set: {
-          email: decodedToken.email,
-          name: decodedToken.name || decodedToken.email.split('@')[0],
-          photoURL: decodedToken.picture || null,
-          isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
-          lastLogin: new Date()
+    try {
+      // First try to find the user by Firebase UID
+      let user = await User.findOne({ firebaseUid: decodedToken.uid });
+      
+      if (user) {
+        // If user exists, update it
+        console.log('User found, updating...');
+        user = await User.findByIdAndUpdate(
+          user._id,
+          {
+            $set: {
+              email: decodedToken.email,
+              name: decodedToken.name || decodedToken.email.split('@')[0],
+              photoURL: decodedToken.picture || null,
+              isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
+              lastLogin: new Date()
+            }
+          },
+          { new: true }
+        );
+      } else {
+        // If user doesn't exist, try to find by email first
+        console.log('User not found by UID, checking by email...');
+        user = await User.findOne({ email: decodedToken.email });
+        
+        if (user) {
+          // If user exists with this email but different UID, update the UID
+          console.log('User found by email, updating UID...');
+          user = await User.findByIdAndUpdate(
+            user._id,
+            {
+              $set: {
+                firebaseUid: decodedToken.uid,
+                name: decodedToken.name || decodedToken.email.split('@')[0],
+                photoURL: decodedToken.picture || null,
+                isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
+                lastLogin: new Date()
+              }
+            },
+            { new: true }
+          );
+        } else {
+          // If user doesn't exist at all, create a new one
+          console.log('Creating new user...');
+          user = new User({
+            firebaseUid: decodedToken.uid,
+            email: decodedToken.email,
+            name: decodedToken.name || decodedToken.email.split('@')[0],
+            photoURL: decodedToken.picture || null,
+            isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
+            lastLogin: new Date()
+          });
+          await user.save();
         }
-      },
-      {
-        new: true, // Return the updated document
-        upsert: true, // Create if doesn't exist
-        setDefaultsOnInsert: true // Apply schema defaults on insert
       }
-    );
+    } catch (dbError) {
+      console.error('Error handling user in database:', dbError);
+      return res.status(500).json({
+        success: false,
+        message: 'Error processing user data',
+        error: dbError.message
+      });
+    }
 
     console.log('User found/created in verify endpoint:', {
       email: user.email,
