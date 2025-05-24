@@ -23,33 +23,48 @@ router.post('/admin/login', async (req, res) => {
       });
     }
 
-    // For admin authentication, we'll use a simpler approach to avoid Firebase issues
-    // Instead of creating a custom token, we'll create a JWT token directly
-    const jwt = require('jsonwebtoken');
-    const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
+    // Create a Firebase custom token for admin authentication
+    // The Firebase Admin SDK must be used for this
+    const adminUid = 'admin-user-id';
     let customToken;
     
     try {
-      console.log('Creating admin authentication token...');
+      console.log('Creating Firebase custom token for admin...');
       
-      // Create a simple JWT token for admin authentication
-      customToken = jwt.sign(
-        { 
-          uid: 'admin-user-id',
-          email: 'hiteshboss@gmail.com',
-          isAdmin: true,
-          name: 'Admin User'
-        }, 
-        JWT_SECRET, 
-        { expiresIn: '24h' }
-      );
+      // First, make sure the admin user exists in Firebase
+      try {
+        // Try to get the user first
+        await admin.auth().getUser(adminUid);
+        console.log('Admin user exists in Firebase');
+      } catch (userError) {
+        // If user doesn't exist, create it
+        if (userError.code === 'auth/user-not-found') {
+          try {
+            await admin.auth().createUser({
+              uid: adminUid,
+              email: 'hiteshboss@gmail.com',
+              displayName: 'Admin User'
+            });
+            console.log('Created admin user in Firebase');
+          } catch (createError) {
+            // If we can't create the user, just log the error but continue
+            // This might happen if the user already exists but we got a different error
+            console.error('Note: Could not create admin user:', createError.message);
+          }
+        } else {
+          // Log other errors but continue
+          console.error('Note: Error checking admin user:', userError.message);
+        }
+      }
       
-      console.log('Admin token created successfully');
+      // Create the custom token
+      customToken = await admin.auth().createCustomToken(adminUid, { isAdmin: true });
+      console.log('Firebase custom token created successfully');
     } catch (error) {
-      console.error('Error creating admin token:', error);
+      console.error('Error creating Firebase custom token:', error);
       return res.status(500).json({
         success: false,
-        message: 'Error creating admin token',
+        message: 'Error creating authentication token',
         error: error.message
       });
     }
