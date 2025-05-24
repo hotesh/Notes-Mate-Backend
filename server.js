@@ -21,14 +21,20 @@ connectDB().then(async () => {
   }
 });
 
-// Middleware
+// Custom CORS middleware for better control over headers
+const corsMiddleware = require('./middleware/cors');
+
+// Apply our custom CORS middleware first
+app.use(corsMiddleware);
+
+// Keep the standard cors middleware as a fallback
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production'
     ? [process.env.FRONTEND_URL, 'https://note-mate.vercel.app', 'https://notes-mate-nine.vercel.app', 'https://notes-mate.vercel.app']
     : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'X-Requested-With', 'Accept', 'Origin', 'Pragma'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cache-Control', 'X-Requested-With', 'Accept', 'Origin', 'Pragma', 'Expires'],
   exposedHeaders: ['Content-Length', 'Content-Type'],
   preflightContinue: false,
   optionsSuccessStatus: 204,
