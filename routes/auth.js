@@ -24,34 +24,65 @@ router.post('/admin/login', async (req, res) => {
     const adminUid = 'admin-user-id';
     let customToken;
     
-    // First check if this admin user exists in Firebase
     try {
+      console.log('Starting admin authentication process...');
+      
+      // First check if this admin user exists in Firebase
       try {
         await admin.auth().getUser(adminUid);
         console.log('Admin user exists in Firebase');
       } catch (userError) {
+        console.log('Admin user error:', userError.code, userError.message);
+        
         if (userError.code === 'auth/user-not-found') {
           // Create the admin user in Firebase if it doesn't exist
-          await admin.auth().createUser({
-            uid: adminUid,
-            email: 'hiteshboss@gmail.com',
-            displayName: 'Admin User'
-          });
-          console.log('Created admin user in Firebase');
+          try {
+            await admin.auth().createUser({
+              uid: adminUid,
+              email: 'hiteshboss@gmail.com',
+              displayName: 'Admin User'
+            });
+            console.log('Created admin user in Firebase');
+          } catch (createError) {
+            console.error('Error creating admin user:', createError);
+            return res.status(500).json({
+              success: false,
+              message: 'Error creating admin user',
+              error: createError.message
+            });
+          }
         } else {
-          throw userError;
+          console.error('Unexpected user error:', userError);
+          return res.status(500).json({
+            success: false,
+            message: 'Error checking admin user',
+            error: userError.message
+          });
         }
       }
       
       // Create custom token with admin claims
-      customToken = await admin.auth().createCustomToken(adminUid, {
-        isAdmin: true
+      try {
+        console.log('Creating custom token for admin...');
+        customToken = await admin.auth().createCustomToken(adminUid, {
+          isAdmin: true
+        });
+        console.log('Admin custom token created successfully');
+      } catch (tokenError) {
+        console.error('Error creating custom token:', tokenError);
+        return res.status(500).json({
+          success: false,
+          message: 'Error creating authentication token',
+          error: tokenError.message
+        });
+      }
+    } catch (error) {
+      console.error('Unexpected error in admin authentication:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Unexpected error during admin login',
+        error: error.message
       });
-      
-      console.log('Admin custom token created successfully');
-    } catch (tokenError) {
-      console.error('Error creating custom token:', tokenError);
-      throw tokenError;
     }
 
     res.json({
