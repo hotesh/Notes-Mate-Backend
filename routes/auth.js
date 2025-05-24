@@ -9,6 +9,11 @@ router.post('/admin/login', async (req, res) => {
     const { email, password } = req.body;
     console.log('Admin login attempt:', { email });
 
+    // Set CORS headers explicitly for this response
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Cache-Control, X-Requested-With, Accept, Origin');
+
     // Verify admin credentials
     if (email !== 'hiteshboss@gmail.com' || password !== 'boss321') {
       console.log('Invalid admin credentials');
@@ -18,69 +23,33 @@ router.post('/admin/login', async (req, res) => {
       });
     }
 
-    // Create custom token for admin
-    // The first parameter must be a valid Firebase UID
-    // For admin, we use a fixed UID 'admin-user-id'
-    const adminUid = 'admin-user-id';
+    // For admin authentication, we'll use a simpler approach to avoid Firebase issues
+    // Instead of creating a custom token, we'll create a JWT token directly
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your_jwt_secret_here';
     let customToken;
     
     try {
-      console.log('Starting admin authentication process...');
+      console.log('Creating admin authentication token...');
       
-      // First check if this admin user exists in Firebase
-      try {
-        await admin.auth().getUser(adminUid);
-        console.log('Admin user exists in Firebase');
-      } catch (userError) {
-        console.log('Admin user error:', userError.code, userError.message);
-        
-        if (userError.code === 'auth/user-not-found') {
-          // Create the admin user in Firebase if it doesn't exist
-          try {
-            await admin.auth().createUser({
-              uid: adminUid,
-              email: 'hiteshboss@gmail.com',
-              displayName: 'Admin User'
-            });
-            console.log('Created admin user in Firebase');
-          } catch (createError) {
-            console.error('Error creating admin user:', createError);
-            return res.status(500).json({
-              success: false,
-              message: 'Error creating admin user',
-              error: createError.message
-            });
-          }
-        } else {
-          console.error('Unexpected user error:', userError);
-          return res.status(500).json({
-            success: false,
-            message: 'Error checking admin user',
-            error: userError.message
-          });
-        }
-      }
+      // Create a simple JWT token for admin authentication
+      customToken = jwt.sign(
+        { 
+          uid: 'admin-user-id',
+          email: 'hiteshboss@gmail.com',
+          isAdmin: true,
+          name: 'Admin User'
+        }, 
+        JWT_SECRET, 
+        { expiresIn: '24h' }
+      );
       
-      // Create custom token with admin claims
-      try {
-        console.log('Creating custom token for admin...');
-        customToken = await admin.auth().createCustomToken(adminUid, {
-          isAdmin: true
-        });
-        console.log('Admin custom token created successfully');
-      } catch (tokenError) {
-        console.error('Error creating custom token:', tokenError);
-        return res.status(500).json({
-          success: false,
-          message: 'Error creating authentication token',
-          error: tokenError.message
-        });
-      }
+      console.log('Admin token created successfully');
     } catch (error) {
-      console.error('Unexpected error in admin authentication:', error);
+      console.error('Error creating admin token:', error);
       return res.status(500).json({
         success: false,
-        message: 'Unexpected error during admin login',
+        message: 'Error creating admin token',
         error: error.message
       });
     }
