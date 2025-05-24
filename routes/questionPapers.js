@@ -63,6 +63,7 @@ router.post('/upload', adminAuth, upload.single('file'), async (req, res) => {
 // Get All Question Papers
 router.get('/', auth, async (req, res) => {
   try {
+    console.log('Fetching question papers...');
     const { semester, branch } = req.query;
     const query = {};
 
@@ -70,29 +71,76 @@ router.get('/', auth, async (req, res) => {
     if (semester) query.semester = semester;
     if (branch) query.branch = branch;
 
+    console.log('Query filters:', query);
+
     // Get all question papers
     const questionPapers = await QuestionPaper.find(query)
       .sort({ uploadedAt: -1 })
       .populate('uploadedBy', 'name email');
 
+    console.log(`Found ${questionPapers.length} question papers`);
+
     // Get user's purchased papers
-    const user = await User.findById(req.user._id);
-    const purchasedPaperIds = user.purchasedPapers.map(id => id.toString());
+    try {
+      const user = await User.findById(req.user._id);
+      
+      if (!user) {
+        console.error('User not found:', req.user._id);
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
 
-    // Add a 'purchased' field to each paper
-    const papersWithPurchaseInfo = questionPapers.map(paper => {
-      const paperObj = paper.toObject();
-      paperObj.purchased = purchasedPaperIds.includes(paper._id.toString());
-      return paperObj;
-    });
+      const purchasedPaperIds = user.purchasedPapers.map(id => id.toString());
 
-    res.json({
-      success: true,
-      data: papersWithPurchaseInfo,
-      walletBalance: user.wallet
-    });
+      // Add a 'purchased' field to each paper
+      const papersWithPurchaseInfo = questionPapers.map(paper => {
+        const paperObj = paper.toObject();
+        paperObj.purchased = purchasedPaperIds.includes(paper._id.toString());
+        return paperObj;
+      });
+
+      // Set CORS headers explicitly for this response
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      res.json({
+        success: true,
+        data: papersWithPurchaseInfo,
+        walletBalance: user.wallet
+      });
+    } catch (userError) {
+      console.error('Error processing user data:', userError);
+      
+      // Even if user data processing fails, return the papers without purchase info
+      const simplePapers = questionPapers.map(paper => {
+        const paperObj = paper.toObject();
+        paperObj.purchased = false; // Default to not purchased
+        return paperObj;
+      });
+
+      // Set CORS headers explicitly for this response
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+      res.json({
+        success: true,
+        data: simplePapers,
+        walletBalance: 0,
+        note: 'User data could not be processed, showing papers without purchase info'
+      });
+    }
   } catch (error) {
     console.error('Error fetching question papers:', error);
+    
+    // Set CORS headers even for error responses
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    
     res.status(500).json({ 
       success: false, 
       message: 'Error fetching question papers', 
