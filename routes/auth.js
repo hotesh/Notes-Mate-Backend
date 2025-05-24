@@ -115,9 +115,12 @@ router.post('/verify', async (req, res) => {
       throw new Error('Invalid token: No user ID found');
     }
 
+    // Variable to store the user data
+    let user;
+    
     try {
       // First try to find the user by Firebase UID
-      let user = await User.findOne({ firebaseUid: decodedToken.uid });
+      user = await User.findOne({ firebaseUid: decodedToken.uid });
       
       if (user) {
         // If user exists, update it
@@ -170,6 +173,13 @@ router.post('/verify', async (req, res) => {
           await user.save();
         }
       }
+      
+      // Log user info after successful processing
+      console.log('User found/created in verify endpoint:', {
+        email: user.email,
+        isAdmin: user.isAdmin,
+        lastLogin: user.lastLogin
+      });
     } catch (dbError) {
       console.error('Error handling user in database:', dbError);
       return res.status(500).json({
@@ -178,12 +188,15 @@ router.post('/verify', async (req, res) => {
         error: dbError.message
       });
     }
-
-    console.log('User found/created in verify endpoint:', {
-      email: user.email,
-      isAdmin: user.isAdmin,
-      lastLogin: user.lastLogin
-    });
+    
+    // Check if user was successfully retrieved or created
+    if (!user) {
+      console.error('User not found or created');
+      return res.status(401).json({
+        success: false,
+        message: 'User not found or created'
+      });
+    }
 
     res.json({
       success: true,
