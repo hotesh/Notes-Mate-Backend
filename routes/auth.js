@@ -130,7 +130,8 @@ router.post('/verify', async (req, res) => {
           {
             $set: {
               email: decodedToken.email,
-              name: decodedToken.name || decodedToken.email.split('@')[0],
+              // Only update name if it doesn't exist (preserve user's custom name)
+              ...(user.name ? {} : { name: decodedToken.name || decodedToken.email.split('@')[0] }),
               photoURL: decodedToken.picture || null,
               isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
               lastLogin: new Date()
@@ -151,7 +152,8 @@ router.post('/verify', async (req, res) => {
             {
               $set: {
                 firebaseUid: decodedToken.uid,
-                name: decodedToken.name || decodedToken.email.split('@')[0],
+                // Only update name if it doesn't exist (preserve user's custom name)
+                ...(user.name ? {} : { name: decodedToken.name || decodedToken.email.split('@')[0] }),
                 photoURL: decodedToken.picture || null,
                 isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
                 lastLogin: new Date()

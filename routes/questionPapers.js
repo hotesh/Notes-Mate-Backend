@@ -197,11 +197,8 @@ router.post('/purchase/:id', auth, async (req, res) => {
     }
 
     console.log(`Deducting ${questionPaper.price} from wallet balance ${user.wallet}`);
-    // Deduct price from wallet
-    user.wallet = Math.max(0, user.wallet - questionPaper.price);
-    console.log(`New wallet balance: ${user.wallet}`);
     
-    // Calculate new wallet balance
+    // Calculate new wallet balance (only deduct once)
     const newWalletBalance = Math.max(0, user.wallet - questionPaper.price);
     console.log(`New wallet balance: ${newWalletBalance}`);
     

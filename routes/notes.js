@@ -486,9 +486,13 @@ router.get('/:id/download', auth, async (req, res) => {
       });
     }
 
-    // Increment download count
-    note.downloads = (note.downloads || 0) + 1;
-    await note.save();
+    // Increment download count - using updateOne to ensure atomic update
+    await Note.updateOne(
+      { _id: note._id },
+      { $inc: { downloads: 1 } }
+    );
+    
+    console.log(`Incremented download count for note: ${note._id}, new count: ${(note.downloads || 0) + 1}`);
 
     // Redirect to the file URL
     res.redirect(note.fileUrl);
