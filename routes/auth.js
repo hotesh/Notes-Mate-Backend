@@ -164,15 +164,42 @@ router.post('/verify', async (req, res) => {
         } else {
           // If user doesn't exist at all, create a new one
           console.log('Creating new user...');
-          user = new User({
-            firebaseUid: decodedToken.uid,
-            email: decodedToken.email,
-            name: decodedToken.name || decodedToken.email.split('@')[0],
-            photoURL: decodedToken.picture || null,
-            isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
-            lastLogin: new Date()
-          });
-          await user.save();
+          try {
+            user = new User({
+              firebaseUid: decodedToken.uid,
+              email: decodedToken.email,
+              name: decodedToken.name || decodedToken.email.split('@')[0],
+              photoURL: decodedToken.picture || null,
+              isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
+              // Set default values for semester and branch to avoid validation errors
+              semester: '',
+              branch: '',
+              lastLogin: new Date()
+            });
+            await user.save();
+            console.log('New user created successfully');
+          } catch (createError) {
+            console.error('Error creating new user:', createError);
+            // If there's a validation error, try with explicit null values
+            if (createError.name === 'ValidationError') {
+              console.log('Attempting to create user with explicit null values for enum fields');
+              user = new User({
+                firebaseUid: decodedToken.uid,
+                email: decodedToken.email,
+                name: decodedToken.name || decodedToken.email.split('@')[0],
+                photoURL: decodedToken.picture || null,
+                isAdmin: decodedToken.email === 'hiteshboss@gmail.com',
+                // Set to empty string which should be valid
+                semester: '',
+                branch: '',
+                lastLogin: new Date()
+              });
+              await user.save();
+              console.log('User created with fallback values');
+            } else {
+              throw createError; // Re-throw if it's not a validation error
+            }
+          }
         }
       }
       

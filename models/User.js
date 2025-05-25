@@ -40,13 +40,13 @@ const userSchema = new mongoose.Schema({
   },
   semester: {
     type: String,
-    enum: ['1', '2', '3', '4', '5', '6', '7', '8'],
-    default: null
+    enum: ['1', '2', '3', '4', '5', '6', '7', '8', '', null],
+    default: ''
   },
   branch: {
     type: String,
-    enum: ['CSE', 'ISE', 'ECE', 'EEE', 'ME', 'CE', 'IPE', 'BT', 'AE', 'IEM'],
-    default: null
+    enum: ['CSE', 'ISE', 'ECE', 'EEE', 'ME', 'CE', 'IPE', 'BT', 'AE', 'IEM', '', null],
+    default: ''
   },
   phoneNumber: {
     type: String,
